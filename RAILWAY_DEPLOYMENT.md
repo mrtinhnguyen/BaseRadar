@@ -8,9 +8,11 @@ Hướng dẫn deploy BaseRadar lên Railway và xử lý các vấn đề thư�
 
 Dự án đã bao gồm các file cấu hình sau:
 
-- **`nixpacks.toml`**: Cấu hình build process cho Railway
 - **`Procfile`**: Định nghĩa command để chạy ứng dụng
 - **`railway.json`**: Cấu hình Railway deployment (optional)
+- **`requirements.txt`**: Python dependencies (Railway tự detect từ file này)
+
+**Lưu ý**: Railway tự động detect Python project từ `requirements.txt`, không cần `nixpacks.toml`.
 
 ### 2. Environment Variables
 
@@ -138,14 +140,16 @@ railway logs
 
 ### 1. Build Time
 
-- Railway sử dụng Nixpacks để build
-- File `nixpacks.toml` đã được tối ưu
+- Railway tự động detect Python từ `requirements.txt`
+- Sử dụng Nixpacks để build tự động
 - Dependencies được cache giữa các lần build
+- Không cần file `nixpacks.toml` - Railway tự detect
 
 ### 2. Runtime
 
-- Python 3.10 được sử dụng (theo `nixpacks.toml`)
-- `PYTHONUNBUFFERED=1` để log real-time
+- Python version được tự động detect (thường là Python 3.10+)
+- `PYTHONUNBUFFERED=1` được set tự động để log real-time
+- Command chạy từ `Procfile`: `python main.py`
 
 ### 3. Resource Usage
 
@@ -157,11 +161,24 @@ railway logs
 
 ### Build fails
 
+**Lỗi:** `undefined variable 'pip'` hoặc `undefined variable '$NIXPACKS_PATH'`
+- **Nguyên nhân:** File `nixpacks.toml` có cấu hình sai hoặc không cần thiết
+- **Giải pháp:** 
+  - Xóa file `nixpacks.toml` (Railway tự detect Python từ `requirements.txt`)
+  - Railway sẽ tự động detect và build Python project
+  - Chỉ cần `Procfile` và `requirements.txt`
+
 **Lỗi:** `ModuleNotFoundError`
 - **Giải pháp:** Kiểm tra `requirements.txt` có đầy đủ dependencies
 
 **Lỗi:** `FileNotFoundError: config/config.yaml`
 - **Giải pháp:** Đảm bảo file config được commit vào git
+
+**Lỗi:** Build timeout hoặc chậm
+- **Giải pháp:** 
+  - Kiểm tra `requirements.txt` không có dependencies quá lớn
+  - Railway cache dependencies giữa các lần build
+  - Có thể set env var `NIXPACKS_NO_CACHE=1` để clear cache nếu cần
 
 ### Runtime errors
 
@@ -189,11 +206,34 @@ railway logs
 4. **Testing**: Test locally trước khi deploy
 5. **Monitoring**: Check logs định kỳ để phát hiện vấn đề sớm
 
+## Setup Cron Job
+
+Railway không có tính năng cron job built-in. Xem hướng dẫn chi tiết trong file **`RAILWAY_CRON_SETUP.md`**.
+
+**Tóm tắt nhanh:**
+
+1. **Sử dụng External Cron Service** (Khuyến nghị):
+   - **cron-job.org** (miễn phí, không giới hạn)
+   - Tạo cron job với URL: `https://your-project.up.railway.app/api`
+   - Schedule: `0 * * * *` (mỗi giờ) hoặc tùy chỉnh
+
+2. **GitHub Actions** (nếu dùng GitHub):
+   - Workflow đã có sẵn trong `.github/workflows/crawler.yml`
+   - Enable Actions và cấu hình secrets
+
+3. **Kiểm tra:**
+   - Test URL thủ công trước
+   - Monitor logs trong Railway Dashboard
+   - Đảm bảo service không bị sleep (free tier)
+
+Xem chi tiết: [RAILWAY_CRON_SETUP.md](./RAILWAY_CRON_SETUP.md)
+
 ## Support
 
 Nếu gặp vấn đề:
 1. Check Railway logs
 2. Check error messages trong code (đã được cải thiện)
 3. Xem troubleshooting section ở trên
-4. Open GitHub issue với error details
+4. Xem RAILWAY_CRON_SETUP.md cho cron job issues
+5. Open GitHub issue với error details
 
