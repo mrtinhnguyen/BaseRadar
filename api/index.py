@@ -1,19 +1,30 @@
 """
 Vercel serverless function for BaseRadar
 """
-import json
-import sys
-import os
-
-# DO NOT import anything that might fail at module level
-# All imports should be inside handler function
-
-# Add project root to path (safe operation)
+# Wrap all imports in try-except to prevent module-level crashes
 try:
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.insert(0, project_root)
+    import json
+    import sys
+    import os
+    
+    # DO NOT import anything that might fail at module level
+    # All imports should be inside handler function
+    
+    # Add project root to path (safe operation)
+    try:
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        sys.path.insert(0, project_root)
+    except Exception as e:
+        # If even this fails, we'll handle it in handler
+        project_root = None
+        print(f"Warning: Could not set project_root at module level: {e}", file=sys.stderr)
 except Exception as e:
-    # If even this fails, we'll handle it in handler
+    # Catch any import errors at module level
+    import sys
+    print(f"CRITICAL: Module-level import error in api/index.py: {e}", file=sys.stderr)
+    import traceback
+    print(traceback.format_exc(), file=sys.stderr)
+    # Set defaults so handler can still be defined
     project_root = None
 
 def handler(request):

@@ -3483,55 +3483,124 @@ Please use an HTML-capable email client to view the full report content.
         print(f"SMTP Server: {smtp_server}:{smtp_port}")
         print(f"From: {from_email}")
 
-        try:
-            if use_tls:
-                # TLS mode
-                server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
-                server.set_debuglevel(0)  # Set to 1 to view detailed debug info
-                server.ehlo()
-                server.starttls()
-                server.ehlo()
-            else:
-                # SSL mode
-                server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
-                server.set_debuglevel(0)
-                server.ehlo()
+        # Retry logic for network issues (especially on Railway)
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(1, max_retries + 1):
+            try:
+                if use_tls:
+                    # TLS mode
+                    server = smtplib.SMTP(smtp_server, smtp_port, timeout=30)
+                    server.set_debuglevel(0)  # Set to 1 to view detailed debug info
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                else:
+                    # SSL mode
+                    server = smtplib.SMTP_SSL(smtp_server, smtp_port, timeout=30)
+                    server.set_debuglevel(0)
+                    server.ehlo()
 
-            # Login
-            server.login(from_email, password)
+                # Login
+                server.login(from_email, password)
 
-            # Send email
-            server.send_message(msg)
-            server.quit()
+                # Send email
+                server.send_message(msg)
+                server.quit()
 
-            print(f"Email sent successfully [{report_type}] -> {to_email}")
-            return True
+                print(f"Email sent successfully [{report_type}] -> {to_email}")
+                return True
 
-        except smtplib.SMTPServerDisconnected:
-            print(f"Email send failed: Server unexpectedly disconnected, please check network or try again later")
-            return False
-
-    except smtplib.SMTPAuthenticationError as e:
-        print(f"Email send failed: Authentication error, please check email and password/authorization code")
-        print(f"Detailed error: {str(e)}")
+            except (OSError, ConnectionError) as e:
+                error_code = getattr(e, 'errno', None)
+                error_msg = str(e)
+                
+                # Check if it's a network unreachable error
+                if error_code == 101 or "Network is unreachable" in error_msg or "Network unreachable" in error_msg:
+                    if attempt < max_retries:
+                        wait_time = retry_delay * attempt
+                        print(f"⚠️ Network unreachable (attempt {attempt}/{max_retries}). Retrying in {wait_time}s...")
+                        print(f"   This may be due to Railway network restrictions. Consider using an email API service.")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        print(f"❌ Email send failed after {max_retries} attempts: Network is unreachable")
+                        print(f"   Railway may be blocking outbound SMTP connections.")
+                        print(f"   Solutions:")
+                        print(f"   1. Use an email API service (SendGrid, Mailgun, AWS SES)")
+                        print(f"   2. Check Railway network/firewall settings")
+                        print(f"   3. Use Railway's private networking if available")
+                        return False
+                else:
+                    # Other network errors - retry once
+                    if attempt < max_retries:
+                        wait_time = retry_delay * attempt
+                        print(f"⚠️ Network error (attempt {attempt}/{max_retries}): {error_msg}")
+                        print(f"   Retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        print(f"❌ Email send failed after {max_retries} attempts: {error_msg}")
+                        return False
+                        
+            except smtplib.SMTPServerDisconnected:
+                if attempt < max_retries:
+                    wait_time = retry_delay * attempt
+                    print(f"⚠️ SMTP server disconnected (attempt {attempt}/{max_retries}). Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"❌ Email send failed: Server unexpectedly disconnected after {max_retries} attempts")
+                    print(f"   Please check network connectivity or try again later")
+                    return False
+                    
+            except smtplib.SMTPConnectError as e:
+                if attempt < max_retries:
+                    wait_time = retry_delay * attempt
+                    print(f"⚠️ SMTP connection error (attempt {attempt}/{max_retries}): {str(e)}")
+                    print(f"   Retrying in {wait_time}s...")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    print(f"❌ Email send failed: Unable to connect to SMTP server {smtp_server}:{smtp_port}")
+                    print(f"   Detailed error: {str(e)}")
+                    print(f"   This may indicate:")
+                    print(f"   - Network firewall blocking SMTP ports")
+                    print(f"   - Incorrect SMTP server/port")
+                    print(f"   - Railway network restrictions")
+                    return False
+            except smtplib.SMTPAuthenticationError as e:
+                # Authentication errors are not retryable
+                print(f"❌ Email send failed: Authentication error, please check email and password/authorization code")
+                print(f"   Detailed error: {str(e)}")
+                return False
+            except smtplib.SMTPRecipientsRefused as e:
+                # Recipient errors are not retryable
+                print(f"❌ Email send failed: Recipient address rejected {e}")
+                return False
+            except smtplib.SMTPSenderRefused as e:
+                # Sender errors are not retryable
+                print(f"❌ Email send failed: Sender address rejected {e}")
+                return False
+            except smtplib.SMTPDataError as e:
+                # Data errors are not retryable
+                print(f"❌ Email send failed: Email data error {e}")
+                return False
+            except Exception as e:
+                # Other non-retryable errors
+                print(f"❌ Email send failed [{report_type}]: {e}")
+                import traceback
+                traceback.print_exc()
+                return False
+        
+        # Should not reach here, but just in case
         return False
-    except smtplib.SMTPRecipientsRefused as e:
-        print(f"Email send failed: Recipient address rejected {e}")
-        return False
-    except smtplib.SMTPSenderRefused as e:
-        print(f"Email send failed: Sender address rejected {e}")
-        return False
-    except smtplib.SMTPDataError as e:
-        print(f"Email send failed: Email data error {e}")
-        return False
-    except smtplib.SMTPConnectError as e:
-        print(f"Email send failed: Unable to connect to SMTP server {smtp_server}:{smtp_port}")
-        print(f"Detailed error: {str(e)}")
-        return False
+        
     except Exception as e:
-        print(f"Email send failed [{report_type}]: {e}")
+        # Catch any unexpected errors outside the retry loop
+        print(f"❌ Unexpected error in send_to_email: {e}")
         import traceback
-
         traceback.print_exc()
         return False
 
