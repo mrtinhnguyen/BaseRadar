@@ -1,1 +1,4 @@
 .vercel
+pyproject.toml.bak
+pyproject.toml.hidden
+uv.lock

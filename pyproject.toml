@@ -1,6 +1,6 @@
 [project]
 name = "baseradar"
-version = "3.0.4"
+version = "1.0.1"
 description = "BaseRadar - Base ecosystem news aggregator and analyzer"
 requires-python = ">=3.10,<3.13"
 dependencies = [
@@ -19,6 +19,9 @@ trendradar = "mcp_server.server:run_server"
 [dependency-groups]
 dev = []
 
+# Build system configuration
+# Note: This is primarily for MCP server packaging
+# Vercel will use requirements.txt for deployment
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
