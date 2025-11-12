@@ -1,113 +1,83 @@
-胖东来
-于东来
-
-DeepSeek
-梁文锋
-
-华为
-鸿蒙
-HarmonyOS
-任正非
-
-比亚迪
-王传福
-
-大疆
-DJI
-
-宇树
-王兴兴
-
-智元
-灵犀
-稚晖君
-彭志辉
-
-黑神话
-冯骥
-
-影之刃零
-梁其伟
-
-哪吒
-饺子
-杨宇
-!车
-!餐
-
-三体
-流浪地球
-刘慈欣
-郭帆
-
-申奥
-
-京东
-刘强东
-
-字节
-bytedance
-张一鸣
-
-特斯拉
-马斯克
-
-微软
-Microsoft
-
-英伟达
-NVIDIA
-黄仁勋
-
-AMD
-
-谷歌
-google
-gemini
-deepmind
-
-chatgpt
-openai
-sora
-
-claude
-Anthropic
-
-iphone
-ipad
-mac
-ios
-
-ai
-!gai
-人工智能
-
-自动驾驶
-
-机器人
-
-国产
-中国
-
-美国
-日本
-韩国
-
-芯片
-光刻机
-
-科技
-
-核能
-
-水电站
-雅鲁藏布江
-
-新质生产力
-
-月球
-登月
-火星
-宇宙
-飞船
-航空
+Base
+Base Chain
+Base Network
+Base Blockchain
+Base Ecosystem
+Base Mainnet
+Base Testnet
+Base Rollup
+Base Bridge
+Base Onchain
+Base NFT
+Base dApp
+Aerodrome
+Friend.tech
+Warpcast
+Farcaster
+Balancer on Base
+Compound Base
+Uniswap Base
+Aave Base
+Curve Base
+LayerZero Base
+SushiSwap Base
+PancakeSwap Base
+Rocket Pool Base
+Degen Chain
+onchain summer
+Coinbase
+Coinbase L2
+Coinbase Ventures
+Optimism
+OP Stack
+Superchain
+Arbitrum
+Zora Network
+zkSync
+Scroll
+Polygon CDK
+Modular blockchain
+Layer 2 scaling
+Rollup-as-a-Service
+Onchain identity
+Decentralized social
+DeFi
+NFT
+Restaking
+EigenLayer
+Account abstraction
+Smart wallets
+Gasless transactions
+Interoperability
+Bridge security
+MEV
+Sequencer decentralization
+Jesse Pollak
+Brian Armstrong
+Vitalik Buterin
+Hayden Adams
+Stani Kulechov
+Robert Leshner
+Ben Jones
+Jesse Walden
+Onchain summer
+Base memes
+Base drops
+Crypto airdrops
+Web3 builders
+Base developer grants
+Coinbase Cloud
+Open source L2
+Ethereum ecosystem
+Crypto news
+Blockchain startup
+Crypto funding
+app coins
+meme coins
+protocol coins
+network coins
+creator coins
+content coins
+community coins
+stock coins
+x402 coins
