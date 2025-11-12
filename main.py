@@ -162,10 +162,74 @@ def load_config():
     return config
 
 
-print("Loading configuration...")
-CONFIG = load_config()
-print(f"BaseRadar v{VERSION} configuration loaded successfully")
-print(f"Number of monitored platforms: {len(CONFIG['PLATFORMS'])}")
+# Lazy load CONFIG to avoid errors when importing module
+# CONFIG will be loaded when first accessed or explicitly loaded
+_config_cache = None
+
+
+class ConfigDict:
+    """Lazy loading config dictionary wrapper"""
+    def __init__(self):
+        self._config = None
+    
+    def _load(self):
+        """Load config if not already loaded"""
+        global _config_cache
+        if self._config is None:
+            if _config_cache is None:
+                print("Loading configuration...")
+                _config_cache = load_config()
+                print(f"BaseRadar v{VERSION} configuration loaded successfully")
+                print(f"Number of monitored platforms: {len(_config_cache['PLATFORMS'])}")
+            self._config = _config_cache
+        return self._config
+    
+    def __getitem__(self, key):
+        return self._load()[key]
+    
+    def __contains__(self, key):
+        return key in self._load()
+    
+    def get(self, key, default=None):
+        return self._load().get(key, default)
+    
+    def __getattr__(self, key):
+        # Allow attribute access like CONFIG.REQUEST_INTERVAL
+        try:
+            return self._load()[key]
+        except KeyError:
+            raise AttributeError(f"Config has no key '{key}'")
+    
+    def keys(self):
+        return self._load().keys()
+    
+    def values(self):
+        return self._load().values()
+    
+    def items(self):
+        return self._load().items()
+
+
+CONFIG = ConfigDict()
+
+
+def get_config():
+    """Get or load configuration (lazy loading)"""
+    return CONFIG._load()
+
+
+# Auto-load config only if not in Vercel/serverless environment
+# This allows the module to be imported without immediately failing
+if os.environ.get("VERCEL") != "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    try:
+        _config_cache = load_config()
+        CONFIG._config = _config_cache
+        print(f"BaseRadar v{VERSION} configuration loaded successfully")
+        print(f"Number of monitored platforms: {len(_config_cache['PLATFORMS'])}")
+    except (FileNotFoundError, Exception) as e:
+        # In serverless environments, config will be loaded on demand
+        print(f"Configuration not loaded at module level: {e}")
+        print("Will be loaded on first access")
 
 
 # === Utility Functions ===
@@ -297,7 +361,8 @@ class PushRecordManager:
 
     def cleanup_old_records(self):
         """Clean up expired push records"""
-        retention_days = CONFIG["PUSH_WINDOW"]["RECORD_RETENTION_DAYS"]
+        config = get_config()
+        retention_days = config["PUSH_WINDOW"]["RECORD_RETENTION_DAYS"]
         current_time = get_utc_time()
 
         for record_file in self.record_dir.glob("push_record_*.json"):
@@ -488,7 +553,7 @@ class DataFetcher:
     def crawl_websites(
         self,
         ids_list: List[Union[str, Tuple[str, str]]],
-        request_interval: int = CONFIG["REQUEST_INTERVAL"],
+        request_interval: Optional[int] = None,
     ) -> Tuple[Dict, Dict, List]:
         """Crawl multiple websites"""
         results = {}
@@ -893,15 +958,19 @@ def detect_latest_new_titles(current_platform_ids: Optional[List[str]] = None) -
 
 # === Statistics and Analysis ===
 def calculate_news_weight(
-    title_data: Dict, rank_threshold: int = CONFIG["RANK_THRESHOLD"]
+    title_data: Dict, rank_threshold: Optional[int] = None
 ) -> float:
     """Calculate news weight for sorting"""
+    if rank_threshold is None:
+        config = get_config()
+        rank_threshold = config["RANK_THRESHOLD"]
     ranks = title_data.get("ranks", [])
     if not ranks:
         return 0.0
 
     count = title_data.get("count", len(ranks))
-    weight_config = CONFIG["WEIGHT_CONFIG"]
+    config = get_config()
+    weight_config = config["WEIGHT_CONFIG"]
 
     # Rank weight: Σ(11 - min(rank, 10)) / occurrence count
     rank_scores = []
@@ -1015,7 +1084,7 @@ def count_word_frequency(
     filter_words: List[str],
     id_to_name: Dict,
     title_info: Optional[Dict] = None,
-    rank_threshold: int = CONFIG["RANK_THRESHOLD"],
+    rank_threshold: Optional[int] = None,
     new_titles: Optional[Dict] = None,
     mode: str = "daily",
 ) -> Tuple[List[Dict], int]:
@@ -1362,7 +1431,7 @@ def prepare_report_data(
                         "time_display": "",
                         "count": 1,
                         "ranks": ranks,
-                        "rank_threshold": CONFIG["RANK_THRESHOLD"],
+                        "rank_threshold": get_config()["RANK_THRESHOLD"],
                         "url": url,
                         "mobile_url": mobile_url,
                         "is_new": True,
@@ -2859,7 +2928,8 @@ def split_content_into_batches(
 ) -> List[str]:
     """Split message content into batches, ensuring word group title + at least first news item integrity"""
     if max_bytes is None:
-        max_bytes = CONFIG.get("MESSAGE_BATCH_SIZE", 4000)
+        config = get_config()
+        max_bytes = config.get("MESSAGE_BATCH_SIZE", 4000)
 
     batches = []
 
@@ -3149,10 +3219,12 @@ def send_to_notifications(
     """Send data to multiple notification platforms"""
     results = {}
 
-    if CONFIG["PUSH_WINDOW"]["ENABLED"]:
+    config = get_config()
+    
+    if config["PUSH_WINDOW"]["ENABLED"]:
         push_manager = PushRecordManager()
-        time_range_start = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["START"]
-        time_range_end = CONFIG["PUSH_WINDOW"]["TIME_RANGE"]["END"]
+        time_range_start = config["PUSH_WINDOW"]["TIME_RANGE"]["START"]
+        time_range_end = config["PUSH_WINDOW"]["TIME_RANGE"]["END"]
 
         if not push_manager.is_in_time_range(time_range_start, time_range_end):
             now = get_utc_time()
@@ -3161,7 +3233,7 @@ def send_to_notifications(
             )
             return results
 
-        if CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"]:
+        if config["PUSH_WINDOW"]["ONCE_PER_DAY"]:
             if push_manager.has_pushed_today():
                 print(f"Push window control: Already pushed today, skipping this push")
                 return results
@@ -3170,15 +3242,15 @@ def send_to_notifications(
 
     report_data = prepare_report_data(stats, failed_ids, new_titles, id_to_name, mode)
 
-    telegram_token = CONFIG["TELEGRAM_BOT_TOKEN"]
-    telegram_chat_id = CONFIG["TELEGRAM_CHAT_ID"]
-    email_from = CONFIG["EMAIL_FROM"]
-    email_password = CONFIG["EMAIL_PASSWORD"]
-    email_to = CONFIG["EMAIL_TO"]
-    email_smtp_server = CONFIG.get("EMAIL_SMTP_SERVER", "")
-    email_smtp_port = CONFIG.get("EMAIL_SMTP_PORT", "")
+    telegram_token = config["TELEGRAM_BOT_TOKEN"]
+    telegram_chat_id = config["TELEGRAM_CHAT_ID"]
+    email_from = config["EMAIL_FROM"]
+    email_password = config["EMAIL_PASSWORD"]
+    email_to = config["EMAIL_TO"]
+    email_smtp_server = config.get("EMAIL_SMTP_SERVER", "")
+    email_smtp_port = config.get("EMAIL_SMTP_PORT", "")
 
-    update_info_to_send = update_info if CONFIG["SHOW_VERSION_UPDATE"] else None
+    update_info_to_send = update_info if config["SHOW_VERSION_UPDATE"] else None
 
     # Calculate total titles for email (use provided total_titles or calculate from stats)
     total_titles_for_email = total_titles if total_titles > 0 else sum(len(stat["titles"]) for stat in report_data["stats"]) if report_data.get("stats") else 0
@@ -3216,8 +3288,8 @@ def send_to_notifications(
 
     # If any notification was successfully sent and once per day is enabled, record the push
     if (
-        CONFIG["PUSH_WINDOW"]["ENABLED"]
-        and CONFIG["PUSH_WINDOW"]["ONCE_PER_DAY"]
+        config["PUSH_WINDOW"]["ENABLED"]
+        and config["PUSH_WINDOW"]["ONCE_PER_DAY"]
         and any(results.values())
     ):
         push_manager = PushRecordManager()
@@ -3279,7 +3351,8 @@ def send_to_telegram(
                     print(f"Telegram batch {i}/{len(batches)} sent successfully [{report_type}]")
                     # Interval between batches
                     if i < len(batches):
-                        time.sleep(CONFIG["BATCH_SEND_INTERVAL"])
+                        config = get_config()
+                        time.sleep(config["BATCH_SEND_INTERVAL"])
                 else:
                     print(
                         f"Telegram batch {i}/{len(batches)} failed [{report_type}], error: {result.get('description')}"
@@ -3482,9 +3555,10 @@ class NewsAnalyzer:
     }
 
     def __init__(self):
-        self.request_interval = CONFIG["REQUEST_INTERVAL"]
-        self.report_mode = CONFIG["REPORT_MODE"]
-        self.rank_threshold = CONFIG["RANK_THRESHOLD"]
+        config = get_config()
+        self.request_interval = config["REQUEST_INTERVAL"]
+        self.report_mode = config["REPORT_MODE"]
+        self.rank_threshold = config["RANK_THRESHOLD"]
         self.is_github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
         self.is_docker_container = self._detect_docker_environment()
         self.update_info = None
@@ -3514,10 +3588,11 @@ class NewsAnalyzer:
 
     def _setup_proxy(self) -> None:
         """Setup proxy configuration"""
-        if not self.is_github_actions and CONFIG["USE_PROXY"]:
-            self.proxy_url = CONFIG["DEFAULT_PROXY"]
+        config = get_config()
+        if not self.is_github_actions and config["USE_PROXY"]:
+            self.proxy_url = config["DEFAULT_PROXY"]
             print("Local environment, using proxy")
-        elif not self.is_github_actions and not CONFIG["USE_PROXY"]:
+        elif not self.is_github_actions and not config["USE_PROXY"]:
             print("Local environment, proxy not enabled")
         else:
             print("GitHub Actions environment, not using proxy")
@@ -3525,8 +3600,9 @@ class NewsAnalyzer:
     def _check_version_update(self) -> None:
         """Check for version updates"""
         try:
+            config = get_config()
             need_update, remote_version = check_version_update(
-                VERSION, CONFIG["VERSION_CHECK_URL"], self.proxy_url
+                VERSION, config["VERSION_CHECK_URL"], self.proxy_url
             )
 
             if need_update and remote_version:
@@ -3546,13 +3622,14 @@ class NewsAnalyzer:
 
     def _has_notification_configured(self) -> bool:
         """Check if any notification channel is configured"""
+        config = get_config()
         return any(
             [
-                (CONFIG["TELEGRAM_BOT_TOKEN"] and CONFIG["TELEGRAM_CHAT_ID"]),
+                (config["TELEGRAM_BOT_TOKEN"] and config["TELEGRAM_CHAT_ID"]),
                 (
-                    CONFIG["EMAIL_FROM"]
-                    and CONFIG["EMAIL_PASSWORD"]
-                    and CONFIG["EMAIL_TO"]
+                    config["EMAIL_FROM"]
+                    and config["EMAIL_PASSWORD"]
+                    and config["EMAIL_TO"]
                 ),
             ]
         )
@@ -3578,8 +3655,9 @@ class NewsAnalyzer:
         """Unified data loading and preprocessing, using current monitoring platform list to filter historical data"""
         try:
             # Get current configured monitoring platform ID list
+            config = get_config()
             current_platform_ids = []
-            for platform in CONFIG["PLATFORMS"]:
+            for platform in config["PLATFORMS"]:
                 current_platform_ids.append(platform["id"])
 
             print(f"Current monitoring platforms: {current_platform_ids}")
@@ -3665,7 +3743,7 @@ class NewsAnalyzer:
             id_to_name=id_to_name,
             mode=mode,
             is_daily_summary=is_daily_summary,
-            update_info=self.update_info if CONFIG["SHOW_VERSION_UPDATE"] else None,
+            update_info=self.update_info if get_config()["SHOW_VERSION_UPDATE"] else None,
         )
 
         return stats, html_file
@@ -3682,9 +3760,10 @@ class NewsAnalyzer:
     ) -> bool:
         """Unified notification sending logic, includes all judgment conditions"""
         has_notification = self._has_notification_configured()
+        config = get_config()
 
         if (
-            CONFIG["ENABLE_NOTIFICATION"]
+            config["ENABLE_NOTIFICATION"]
             and has_notification
             and self._has_valid_content(stats, new_titles)
         ):
@@ -3700,12 +3779,12 @@ class NewsAnalyzer:
                 html_file_path=html_file_path,
             )
             return True
-        elif CONFIG["ENABLE_NOTIFICATION"] and not has_notification:
+        elif config["ENABLE_NOTIFICATION"] and not has_notification:
             print("⚠️ Warning: Notification feature is enabled but no notification channel is configured, skipping notification sending")
-        elif not CONFIG["ENABLE_NOTIFICATION"]:
+        elif not config["ENABLE_NOTIFICATION"]:
             print(f"Skipping {report_type} notification: Notification feature is disabled")
         elif (
-            CONFIG["ENABLE_NOTIFICATION"]
+            config["ENABLE_NOTIFICATION"]
             and has_notification
             and not self._has_valid_content(stats, new_titles)
         ):
@@ -3798,12 +3877,13 @@ class NewsAnalyzer:
         now = get_utc_time()
         print(f"Current UTC time: {now.strftime('%Y-%m-%d %H:%M:%S')}")
 
-        if not CONFIG["ENABLE_CRAWLER"]:
+        config = get_config()
+        if not config["ENABLE_CRAWLER"]:
             print("Crawler feature is disabled (ENABLE_CRAWLER=False), exiting program")
             return
 
         has_notification = self._has_notification_configured()
-        if not CONFIG["ENABLE_NOTIFICATION"]:
+        if not config["ENABLE_NOTIFICATION"]:
             print("Notification feature is disabled (ENABLE_NOTIFICATION=False), will only perform data crawling")
         elif not has_notification:
             print("No notification channel configured, will only perform data crawling, no notifications will be sent")
@@ -3816,15 +3896,16 @@ class NewsAnalyzer:
 
     def _crawl_data(self) -> Tuple[Dict, Dict, List]:
         """Execute data crawling"""
+        config = get_config()
         ids = []
-        for platform in CONFIG["PLATFORMS"]:
+        for platform in config["PLATFORMS"]:
             if "name" in platform:
                 ids.append((platform["id"], platform["name"]))
             else:
                 ids.append(platform["id"])
 
         print(
-            f"Configured monitoring platforms: {[p.get('name', p['id']) for p in CONFIG['PLATFORMS']]}"
+            f"Configured monitoring platforms: {[p.get('name', p['id']) for p in config['PLATFORMS']]}"
         )
         print(f"Starting data crawl, request interval {self.request_interval} ms")
         ensure_directory_exists("output")
@@ -3843,7 +3924,8 @@ class NewsAnalyzer:
     ) -> Optional[str]:
         """Execute mode-specific logic"""
         # Get current monitoring platform ID list
-        current_platform_ids = [platform["id"] for platform in CONFIG["PLATFORMS"]]
+        config = get_config()
+        current_platform_ids = [platform["id"] for platform in config["PLATFORMS"]]
 
         new_titles = detect_latest_new_titles(current_platform_ids)
         time_info = Path(save_titles_to_file(results, id_to_name, failed_ids)).stem

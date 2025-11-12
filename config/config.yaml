@@ -56,7 +56,7 @@ notification:
     telegram_chat_id: "-5090430559" # Telegram Chat ID
     email_from: "ticketxhq@gmail.com" # Sender email address
     email_password: "pinq oyik qyyv yvte" # Sender email password or authorization code
-    email_to: "ticketxhq@gmail.com, hi@hubblock.io" # Recipient email address, multiple recipients separated by commas
+    email_to: "anhtinh.net@gmail.com, hi@hubblock.io" # Recipient email address, multiple recipients separated by commas
     email_smtp_server: "" # SMTP server address (optional, leave empty for auto-detection)
     email_smtp_port: "" # SMTP port (optional, leave empty for auto-detection)
 

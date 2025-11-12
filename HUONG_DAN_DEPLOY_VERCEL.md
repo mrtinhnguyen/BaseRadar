@@ -55,19 +55,64 @@ vercel
 vercel --prod
 ```
 
-### Bước 5: Cấu hình Cron Job
+### Bước 5: Cấu hình Cron Job (Dịch vụ bên ngoài)
 
-**Vercel Pro Plan:**
-- Cron job đã được cấu hình trong `vercel.json`
-- Chạy mỗi giờ tại phút 0
+**Lưu ý**: Vercel Hobby plan chỉ cho phép cron job chạy 1 lần/ngày. Để chạy thường xuyên hơn, sử dụng dịch vụ cron bên ngoài.
 
-**Vercel Free Plan:**
-- Sử dụng dịch vụ cron bên ngoài:
-  - [cron-job.org](https://cron-job.org)
-  - [EasyCron](https://www.easycron.com)
-  - [UptimeRobot](https://uptimerobot.com)
-- URL: `https://your-project.vercel.app/api`
-- Lịch: Mỗi giờ (hoặc tùy chỉnh)
+**Các dịch vụ cron bên ngoài phổ biến:**
+
+#### A. cron-job.org (Khuyến nghị - Miễn phí)
+
+1. Đăng ký tại [cron-job.org](https://cron-job.org)
+2. Tạo cron job mới:
+   - **Title**: BaseRadar Crawler
+   - **Address (URL)**: `https://your-project.vercel.app/api`
+   - **Schedule**: 
+     - Mỗi giờ: `0 * * * *`
+     - Mỗi 6 giờ: `0 */6 * * *`
+     - Mỗi 12 giờ: `0 */12 * * *`
+   - **Request Method**: GET
+   - **Request Timeout**: 300 giây
+3. Lưu và kích hoạt
+
+#### B. EasyCron
+
+1. Đăng ký tại [EasyCron](https://www.easycron.com)
+2. Tạo cron job:
+   - **URL**: `https://your-project.vercel.app/api`
+   - **Schedule**: Chọn lịch tùy chỉnh
+   - **HTTP Method**: GET
+3. Lưu và test
+
+#### C. UptimeRobot (Miễn phí)
+
+1. Đăng ký tại [UptimeRobot](https://uptimerobot.com)
+2. Thêm Monitor mới:
+   - **Monitor Type**: HTTP(s)
+   - **URL**: `https://your-project.vercel.app/api`
+   - **Monitoring Interval**: 60 phút (hoặc tùy chỉnh)
+3. Lưu và kích hoạt
+
+#### D. GitHub Actions (Miễn phí - Nếu dùng GitHub)
+
+Đã có sẵn workflow trong `.github/workflows/crawler.yml`:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 * * * *'  # Mỗi giờ
+```
+
+Chỉ cần enable GitHub Actions trong repository settings.
+
+**Cấu hình chi tiết:**
+
+| Dịch vụ | Miễn phí | Giới hạn | Khuyến nghị |
+|---------|----------|----------|-------------|
+| cron-job.org | ✅ Có | 2 jobs/giờ | ⭐ Tốt nhất |
+| EasyCron | ⚠️ Giới hạn | 1 job/giờ (free) | Tốt |
+| UptimeRobot | ✅ Có | 50 monitors | Tốt |
+| GitHub Actions | ✅ Có | 2000 phút/tháng | Tốt nếu dùng GitHub |
 
 ### Kiểm tra Deployment
 

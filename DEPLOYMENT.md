@@ -73,33 +73,54 @@ vercel
 vercel --prod
 ```
 
-#### 6. Setup Cron Job
+#### 6. Setup Cron Job (External Service)
 
-Vercel Pro plan includes cron jobs. For free tier, use external cron service.
+**Note**: Vercel Hobby plan only allows 1 cron job per day. For more frequent runs, use external cron services.
 
-**Option A: Vercel Cron (Pro plan)**
+**Recommended: cron-job.org (Free)**
 
-The `vercel.json` already includes cron configuration:
-```json
-{
-  "crons": [{
-    "path": "/api",
-    "schedule": "0 * * * *"
-  }]
-}
+1. Sign up at [cron-job.org](https://cron-job.org)
+2. Create new cron job:
+   - **Title**: BaseRadar Crawler
+   - **URL**: `https://your-project.vercel.app/api`
+   - **Schedule**: 
+     - Every hour: `0 * * * *`
+     - Every 6 hours: `0 */6 * * *`
+     - Every 12 hours: `0 */12 * * *`
+   - **Request Method**: GET
+   - **Request Timeout**: 300 seconds
+3. Save and activate
+
+**Alternative Services:**
+
+- **EasyCron**: [easycron.com](https://www.easycron.com)
+  - Free tier: 1 job per hour
+  - Paid plans available
+
+- **UptimeRobot**: [uptimerobot.com](https://uptimerobot.com)
+  - Free tier: 50 monitors
+  - Monitoring interval: 5 minutes minimum
+
+- **GitHub Actions**: (If using GitHub)
+  - Already configured in `.github/workflows/crawler.yml`
+  - Free tier: 2000 minutes/month
+  - Enable in repository Settings > Actions
+
+**Cron Schedule Examples:**
+
+```bash
+# Every hour at minute 0
+0 * * * *
+
+# Every 6 hours
+0 */6 * * *
+
+# Every 12 hours (9 AM and 9 PM)
+0 9,21 * * *
+
+# Once daily at 9 AM
+0 9 * * *
 ```
-
-This runs every hour at minute 0.
-
-**Option B: External Cron Service (Free tier)**
-
-Use services like:
-- [cron-job.org](https://cron-job.org)
-- [EasyCron](https://www.easycron.com)
-- [UptimeRobot](https://uptimerobot.com)
-
-Set URL: `https://your-project.vercel.app/api`
-Set schedule: Every hour (or as needed)
 
 #### 7. Verify Deployment
 
