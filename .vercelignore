@@ -30,3 +30,12 @@ output/
 .env.local
 .env.*.local
 
+# Lock files - Vercel will use requirements.txt instead
+uv.lock
+poetry.lock
+Pipfile.lock
+
+# Temporarily hide pyproject.toml to force Vercel to use requirements.txt
+# This prevents Vercel from trying to use uv.lock which doesn't exist
+# pyproject.toml is only needed for MCP server local development
+pyproject.toml
