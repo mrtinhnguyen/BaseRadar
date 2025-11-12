@@ -271,6 +271,54 @@ Ensure `vercel.json` is correct:
 }
 ```
 
+## Windows-Specific Issues
+
+### Issue: `AttributeError: module 'socket' has no attribute 'AF_UNIX'`
+
+**Error Message:**
+```
+AttributeError: module 'socket' has no attribute 'AF_UNIX'
+```
+
+**Cause:**
+- `AF_UNIX` sockets are Unix/Linux-only and not available on Windows
+- Vercel's local development server (`vercel dev`) uses Unix sockets internally
+- This is a limitation of running `vercel dev` on Windows
+
+**Solutions:**
+
+**Option 1: Use WSL (Windows Subsystem for Linux) - Recommended**
+```bash
+# Install WSL if not already installed
+wsl --install
+
+# In WSL, navigate to your project
+cd /mnt/d/2025/Blockchain/basechain/BaseRadar
+
+# Run vercel dev in WSL
+vercel dev
+```
+
+**Option 2: Deploy to Vercel and Test Production**
+- Skip local `vercel dev` testing
+- Deploy directly to Vercel: `vercel --prod`
+- Test on production URL
+- Vercel production runs on Linux, so this works fine
+
+**Option 3: Use Docker (if available)**
+```bash
+# Run in a Linux container
+docker run -it -v ${PWD}:/app -w /app python:3.10 bash
+# Then run vercel dev inside container
+```
+
+**Option 4: Test API Endpoints Directly**
+- Use `python api/index.py` with a local HTTP server
+- Or use `uvicorn` or `gunicorn` to run the API locally
+- Test endpoints with `curl` or Postman
+
+**Note:** This is a Vercel CLI limitation on Windows, not an issue with your code. Production deployments work fine.
+
 ## Getting More Information
 
 The updated `api/index.py` now provides detailed error information:

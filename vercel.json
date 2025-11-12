@@ -5,14 +5,18 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "python": "3.10",
+        "includeFiles": "requirements.txt"
       }
     },
     {
       "src": "api/mcp.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb"
+        "maxLambdaSize": "50mb",
+        "python": "3.10",
+        "includeFiles": "requirements.txt"
       }
     }
   ],
@@ -25,9 +29,6 @@
       "src": "/api/(.*)",
       "dest": "/api/index.py"
     }
-  ],
-  "env": {
-    "PYTHON_VERSION": "3.10"
-  }
+  ]
 }
 

@@ -4,6 +4,13 @@
 Write-Host "Setting up Vercel dev environment..." -ForegroundColor Cyan
 Write-Host ""
 
+# Remove uv.lock if it exists (Vercel will try to use it and cause errors)
+if (Test-Path "uv.lock") {
+    Write-Host "Removing uv.lock to prevent Vercel from using it..." -ForegroundColor Yellow
+    Remove-Item "uv.lock" -Force
+    Write-Host "✓ Deleted uv.lock" -ForegroundColor Green
+}
+
 # Check if pyproject.toml exists
 if (-not (Test-Path "pyproject.toml")) {
     Write-Host "pyproject.toml not found, nothing to do" -ForegroundColor Yellow

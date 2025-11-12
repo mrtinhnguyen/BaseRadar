@@ -16,6 +16,10 @@ Vercel is trying to use `uv.lock` file when it detects `pyproject.toml`, but the
    ```powershell
    .\vercel-dev-setup.ps1
    ```
+   This script will:
+   - Remove `uv.lock` if it exists (prevents Vercel from trying to use it)
+   - Hide `pyproject.toml` (renames to `pyproject.toml.hidden`)
+   - Create a backup of `pyproject.toml` if needed
 
 2. **Run `vercel dev`**:
    ```powershell
@@ -86,11 +90,41 @@ If you accidentally created `uv.lock`:
 2. **Add to `.gitignore`**: `uv.lock` (already added)
 3. **Vercel will use `requirements.txt` instead**
 
+## Windows-Specific: AF_UNIX Error
+
+If you see `AttributeError: module 'socket' has no attribute 'AF_UNIX'`:
+
+This is a **Vercel CLI limitation on Windows**. `vercel dev` uses Unix sockets which don't exist on Windows.
+
+**Solutions:**
+1. **Use WSL** (Windows Subsystem for Linux) - Recommended
+2. **Deploy to Vercel** and test production instead of local dev
+3. **Use Docker** with Linux container
+4. **Test API directly** with Python HTTP server
+
+See `VERCEL_TROUBLESHOOTING.md` for detailed solutions.
+
 ## If Still Having Issues
 
-1. **For local dev**: Use the setup script to hide `pyproject.toml`
-2. **For production**: Check that `.vercelignore` includes `pyproject.toml`
-3. **Verify** `requirements.txt` is in repository root
-4. **Check build logs** in Vercel dashboard
-5. **Ensure** `uv.lock` does NOT exist (delete if found)
+1. **Clear Vercel cache**:
+   ```powershell
+   Remove-Item .vercel -Recurse -Force -ErrorAction SilentlyContinue
+   ```
+
+2. **Ensure NO pyproject.toml exists** (even `pyproject.toml.hidden`):
+   ```powershell
+   Get-ChildItem -Filter "pyproject.toml*" | Remove-Item -Force
+   ```
+
+3. **Ensure NO uv.lock exists**:
+   ```powershell
+   Remove-Item uv.lock -Force -ErrorAction SilentlyContinue
+   ```
+
+4. **For local dev**: Use the setup script to hide `pyproject.toml`
+5. **For production**: Check that `.vercelignore` includes `pyproject.toml`
+6. **Verify** `requirements.txt` is in repository root
+7. **Check build logs** in Vercel dashboard
+8. **Restart terminal** after clearing cache
+9. **On Windows**: Consider using WSL or deploy directly to Vercel
 
