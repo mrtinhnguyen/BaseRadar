@@ -1,0 +1,32 @@
+# Ignore files that are not needed for Vercel deployment
+# These files are for local development or MCP server only
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files (generated at runtime)
+output/
+
+# Local config (use environment variables instead)
+.env.local
+.env.*.local
+
