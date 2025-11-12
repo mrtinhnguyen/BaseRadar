@@ -2,6 +2,14 @@
   "version": 2,
   "builds": [
     {
+      "src": "api/test.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "python": "3.10"
+      }
+    },
+    {
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
@@ -24,6 +32,14 @@
     {
       "src": "/api/mcp(.*)",
       "dest": "/api/mcp.py"
+    },
+    {
+      "src": "/api/test",
+      "dest": "/api/test.py"
+    },
+    {
+      "src": "/api",
+      "dest": "/api/index.py"
     },
     {
       "src": "/api/(.*)",

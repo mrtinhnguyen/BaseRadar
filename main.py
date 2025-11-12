@@ -20,14 +20,21 @@ import requests
 import yaml
 
 # Import crypto crawlers
+# Wrap in try-except to prevent import errors from crashing Vercel
 try:
-    from crawlers import crawl_platform
-    CRAWLERS_AVAILABLE = True
-except ImportError:
+    try:
+        from crawlers import crawl_platform
+        CRAWLERS_AVAILABLE = True
+    except ImportError:
+        CRAWLERS_AVAILABLE = False
+        # Only print warning if not in serverless environment
+        if os.environ.get("VERCEL") != "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+            print("Warning: crawlers module not found")
+except Exception as e:
+    # Safety net: catch any unexpected errors during crawler import
     CRAWLERS_AVAILABLE = False
-    # Only print warning if not in serverless environment
-    if os.environ.get("VERCEL") != "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-        print("Warning: crawlers module not found")
+    import sys
+    print(f"Crawler import error (non-fatal): {e}", file=sys.stderr)
 
 
 VERSION = "3.0.4"
@@ -222,16 +229,24 @@ def get_config():
 
 # Auto-load config only if not in Vercel/serverless environment
 # This allows the module to be imported without immediately failing
-if os.environ.get("VERCEL") != "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
-    try:
-        _config_cache = load_config()
-        CONFIG._config = _config_cache
-        print(f"BaseRadar v{VERSION} configuration loaded successfully")
-        print(f"Number of monitored platforms: {len(_config_cache['PLATFORMS'])}")
-    except (FileNotFoundError, Exception) as e:
-        # In serverless environments, config will be loaded on demand
-        print(f"Configuration not loaded at module level: {e}")
-        print("Will be loaded on first access")
+# Wrap in try-except to prevent any module-level errors from crashing Vercel
+try:
+    if os.environ.get("VERCEL") != "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        try:
+            _config_cache = load_config()
+            CONFIG._config = _config_cache
+            print(f"BaseRadar v{VERSION} configuration loaded successfully")
+            print(f"Number of monitored platforms: {len(_config_cache['PLATFORMS'])}")
+        except (FileNotFoundError, Exception) as e:
+            # In serverless environments, config will be loaded on demand
+            print(f"Configuration not loaded at module level: {e}")
+            print("Will be loaded on first access")
+except Exception as e:
+    # Catch any unexpected errors at module level to prevent Vercel crash
+    # This should never happen, but safety net for Vercel deployment
+    import sys
+    print(f"Module-level error (non-fatal): {e}", file=sys.stderr)
+    # Don't raise - allow module to be imported
 
 
 # === Utility Functions ===
