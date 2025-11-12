@@ -26,13 +26,8 @@
       "dest": "/api/index.py"
     }
   ],
-  "functions": {
-    "api/index.py": {
-      "runtime": "python3.10"
-    },
-    "api/mcp.py": {
-      "runtime": "python3.10"
-    }
+  "env": {
+    "PYTHON_VERSION": "3.10"
   }
 }
 

@@ -25,7 +25,9 @@ try:
     CRAWLERS_AVAILABLE = True
 except ImportError:
     CRAWLERS_AVAILABLE = False
-    print("Warning: crawlers module not found")
+    # Only print warning if not in serverless environment
+    if os.environ.get("VERCEL") != "1" and not os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        print("Warning: crawlers module not found")
 
 
 VERSION = "3.0.4"

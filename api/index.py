@@ -15,8 +15,26 @@ def handler(request):
     Vercel serverless function handler
     """
     try:
+        # Set Vercel environment flag before importing main
+        os.environ["VERCEL"] = "1"
+        
         # Import here to avoid issues with Vercel's cold start
-        from main import NewsAnalyzer, get_config, get_utc_time
+        try:
+            from main import NewsAnalyzer, get_config, get_utc_time
+        except Exception as import_error:
+            import traceback
+            error_trace = traceback.format_exc()
+            return {
+                "statusCode": 500,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({
+                    "status": "error",
+                    "message": f"Failed to import main module: {str(import_error)}",
+                    "type": type(import_error).__name__,
+                    "traceback": error_trace,
+                    "hint": "Check if all dependencies are installed and config files exist"
+                })
+            }
         
         # Load configuration (lazy loading)
         try:
